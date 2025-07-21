@@ -294,6 +294,13 @@ namespace Minesweeper.YourMinesweeper
                 {
                     var cell = _gameEngine.GetCell(row, col);
                     var button = _cellButtons[row, col];
+                    if (cell == null)
+                    {
+                        button.Text = "";
+                        button.BackColor = Color.Silver;
+                        button.Enabled = false;
+                        continue;
+                    }
 
                     if (cell.IsRevealed)
                     {
@@ -347,7 +354,7 @@ namespace Minesweeper.YourMinesweeper
             };
         }
 
-        private void GameEngine_GameStateChanged(object sender, GameStateChangedEventArgs e)
+        private void GameEngine_GameStateChanged(object? sender, GameStateChangedEventArgs e)
         {
             switch (e.NewState)
             {
@@ -390,12 +397,12 @@ namespace Minesweeper.YourMinesweeper
             UpdateTimer();
         }
 
-        private void FaceButton_Click(object sender, EventArgs e)
+        private void FaceButton_Click(object? sender, EventArgs e)
         {
             InitializeGame();
         }
 
-        private void NewGame_Click(object sender, EventArgs e)
+        private void NewGame_Click(object? sender, EventArgs e)
         {
             InitializeGame();
         }

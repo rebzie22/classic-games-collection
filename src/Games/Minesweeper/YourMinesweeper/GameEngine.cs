@@ -45,7 +45,7 @@ namespace Minesweeper.YourMinesweeper
             }
         }
 
-        public Cell GetCell(int row, int column)
+        public Cell? GetCell(int row, int column)
         {
             if (row >= 0 && row < _settings.Rows && column >= 0 && column < _settings.Columns)
                 return _grid[row, column];

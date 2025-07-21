@@ -7,8 +7,8 @@ A modern implementation of classic arcade games built with C# and .NET Windows F
 ### Games Included
 - **Minesweeper** - Classic mine detection puzzle with multiple difficulty levels
 - **Solitaire** - Klondike Solitaire with full drag-and-drop support and dynamic card scaling
-- **Snake** - Traditional snake arcade game *(coming soon)*
-- **Tetris** - Falling blocks puzzle game *(coming soon)*
+- **Snake** - Traditional snake arcade game
+- **Tetris** - Falling blocks puzzle game
 
 ### Architecture Highlights
 - **Plugin System** - Modular architecture with dynamic game discovery
@@ -33,8 +33,8 @@ ClassicGamesCollection/
 │   └── Games/                # Individual game implementations
 │       ├── Minesweeper/      # Complete minesweeper implementation
 │       ├── Solitaire/        # Complete Klondike Solitaire implementation
-│       ├── Snake/            # Snake game (placeholder)
-│       └── Tetris/           # Tetris game (placeholder)
+│       ├── Snake/            # Complete Snake implementation
+│       └── Tetris/           # Complete Tetris implementation
 ```
 
 ### Key Design Patterns
@@ -135,14 +135,14 @@ Each game tracks:
 - Settings: `%APPDATA%/ClassicGamesCollection/`
 - Statistics: `%APPDATA%/ClassicGamesCollection/Statistics/`
 
+
 ## 🔮 Future Enhancements
 
-- Complete Snake and Tetris implementations
+  
 - High score leaderboards
 - Online multiplayer support
 - Custom themes and skins
 - Game replay system
-- Achievement system
 - Sound effects and music
 - Localization support
 
