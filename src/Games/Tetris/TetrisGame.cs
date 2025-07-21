@@ -8,10 +8,12 @@ namespace Tetris
     public class TetrisGame : IGame
     {
         private Image? _icon;
+        private TetrisGameForm? _gameForm;
+        private readonly TetrisStatistics _statistics;
         
         public string GameId => "tetris";
         public string DisplayName => "Tetris";
-        public string Description => "Classic falling blocks puzzle game - Coming Soon!";
+        public string Description => "Classic block-stacking puzzle game. Clear lines by filling them completely with tetrominoes.";
         public string Version => "1.0.0";
         public Image? Icon 
         { 
@@ -24,29 +26,126 @@ namespace Tetris
                 return _icon;
             }
         }
-        public IReadOnlyList<string> DifficultyLevels => new[] { "Level 1", "Level 5", "Level 10", "Level 15" };
+        
+        public IReadOnlyList<string> DifficultyLevels => new[] { "Beginner", "Intermediate", "Expert" };
         public GameState State { get; private set; } = GameState.NotInitialized;
-        public IGameStatistics Statistics { get; }
+        public IGameStatistics Statistics => _statistics;
 
-#pragma warning disable CS0067 // Event is never used - will be implemented later
         public event EventHandler<GameStateChangedEventArgs>? StateChanged;
         public event EventHandler<ScoreChangedEventArgs>? ScoreChanged;
-#pragma warning restore CS0067
 
         public TetrisGame()
         {
-            Statistics = new BaseGameStatistics(GameId);
+            _statistics = new TetrisStatistics("tetris");
         }
 
-        public void Initialize(GameSettings settings) => State = GameState.Ready;
-        public void StartNew() => StartNew("Level 1");
-        public void StartNew(string difficulty) { /* TODO: Implement */ }
-        public void Pause() { /* TODO: Implement */ }
-        public void Resume() { /* TODO: Implement */ }
-        public void Stop() { /* TODO: Implement */ }
-        public Form GetGameWindow() => new Form { Text = "Tetris Game - Coming Soon!", Size = new Size(400, 600) };
-        public void Dispose() { }
-        
+        public void Initialize(GameSettings settings)
+        {
+            State = GameState.Ready;
+            StateChanged?.Invoke(this, new GameStateChangedEventArgs(GameState.NotInitialized, GameState.Ready));
+        }
+
+        public void StartNew() => StartNew("Beginner");
+
+        public void StartNew(string difficulty)
+        {
+            if (_gameForm != null && !_gameForm.IsDisposed)
+            {
+                _gameForm.Close();
+                _gameForm.Dispose();
+                _gameForm = null;
+            }
+
+            _gameForm = new TetrisGameForm(difficulty);
+            _gameForm.ScoreChanged += OnGameFormScoreChanged;
+            _gameForm.ExitRequested += OnGameFormExitRequested;
+
+            _gameForm.Show();
+            _gameForm.Focus();
+
+            State = GameState.Running;
+            StateChanged?.Invoke(this, new GameStateChangedEventArgs(GameState.Ready, GameState.Running));
+        }
+
+        private void OnGameFormScoreChanged(object? sender, ScoreChangedEventArgs e)
+        {
+            // Re-fire the event with this TetrisGame as the sender
+            ScoreChanged?.Invoke(this, e);
+        }
+
+        private void OnGameFormExitRequested(object? sender, EventArgs e)
+        {
+            Stop();
+        }
+
+        public void Pause()
+        {
+            // The pause functionality is handled within the game form
+            State = GameState.Paused;
+            StateChanged?.Invoke(this, new GameStateChangedEventArgs(GameState.Running, GameState.Paused));
+        }
+
+        public void Resume()
+        {
+            State = GameState.Running;
+            StateChanged?.Invoke(this, new GameStateChangedEventArgs(GameState.Paused, GameState.Running));
+        }
+
+        public void Stop()
+        {
+            var oldState = State;
+            
+            if (_gameForm != null && !_gameForm.IsDisposed)
+            {
+                _gameForm.ScoreChanged -= OnGameFormScoreChanged;
+                _gameForm.ExitRequested -= OnGameFormExitRequested;
+                _gameForm.Hide();
+                _gameForm.Dispose();
+                _gameForm = null;
+            }
+            
+            State = GameState.Ready;
+            StateChanged?.Invoke(this, new GameStateChangedEventArgs(oldState, GameState.Ready));
+        }
+
+        public Form GetGameWindow()
+        {
+            if (_gameForm == null || _gameForm.IsDisposed)
+            {
+                _gameForm = new TetrisGameForm("Beginner");
+            }
+            return _gameForm;
+        }
+
+        public void ShowSettings(Form? parentForm = null)
+        {
+            var controls = TetrisControls.Load();
+            using var controlsForm = new TetrisControlsForm(controls);
+            
+            if (parentForm != null)
+            {
+                controlsForm.Owner = parentForm;
+            }
+
+            if (controlsForm.ShowDialog() == DialogResult.OK)
+            {
+                // Controls are automatically saved in the form
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_gameForm != null && !_gameForm.IsDisposed)
+            {
+                _gameForm.ScoreChanged -= OnGameFormScoreChanged;
+                _gameForm.ExitRequested -= OnGameFormExitRequested;
+                _gameForm.Close();
+                _gameForm.Dispose();
+                _gameForm = null;
+            }
+            _icon?.Dispose();
+        }
+
         private Image CreateDefaultTetrisIcon()
         {
             var bitmap = new Bitmap(64, 64);

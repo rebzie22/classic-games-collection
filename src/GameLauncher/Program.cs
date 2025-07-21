@@ -19,6 +19,11 @@ namespace GameLauncher
             Application.ThreadException += Application_ThreadException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
             
+            // Enable visual styles for better rendering
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            
+            // Use the standard Application.Run with main form
             Application.Run(new MainForm());
         }
         

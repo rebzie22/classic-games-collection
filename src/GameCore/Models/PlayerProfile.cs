@@ -10,6 +10,7 @@ namespace GameCore.Models
         public DateTime LastPlayedAt { get; set; } = DateTime.UtcNow;
         public int TotalGamesPlayed { get; set; }
         public Dictionary<string, PlayerGameStats> GameStats { get; set; } = new Dictionary<string, PlayerGameStats>();
+        //
     }
     
     public class PlayerGameStats

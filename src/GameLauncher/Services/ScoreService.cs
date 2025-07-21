@@ -98,6 +98,124 @@ namespace GameLauncher.Services
             return playerScore != null ? gameScores.IndexOf(playerScore) + 1 : -1;
         }
 
+        public async Task ClearAllScoresAsync()
+        {
+            await EnsureDatabaseLoaded();
+            
+            // Clear all scores
+            _database!.Scores.Clear();
+            
+            // Reset player statistics
+            foreach (var player in _database.Players)
+            {
+                player.GameStats.Clear();
+                player.TotalGamesPlayed = 0;
+                // Reset LastPlayedAt to CreatedAt (original date when player was first created)
+                player.LastPlayedAt = player.CreatedAt;
+            }
+            
+            // Save the cleared database
+            await _dataService.SaveDatabaseAsync(_database);
+        }
+
+        public async Task ClearGameScoresAsync(string gameId)
+        {
+            await EnsureDatabaseLoaded();
+            
+            // Remove all scores for the specified game
+            _database!.Scores.RemoveAll(s => s.GameId.Equals(gameId, StringComparison.OrdinalIgnoreCase));
+            
+            // Update player statistics - remove this game's stats
+            foreach (var player in _database.Players)
+            {
+                if (player.GameStats.ContainsKey(gameId))
+                {
+                    var gameStats = player.GameStats[gameId];
+                    player.TotalGamesPlayed -= gameStats.GamesPlayed;
+                    player.GameStats.Remove(gameId);
+                }
+            }
+            
+            // Save the updated database
+            await _dataService.SaveDatabaseAsync(_database);
+        }
+
+        public async Task ClearPlayerScoresAsync(string playerName)
+        {
+            await EnsureDatabaseLoaded();
+            
+            // Remove all scores for the specified player
+            _database!.Scores.RemoveAll(s => s.PlayerName.Equals(playerName, StringComparison.OrdinalIgnoreCase));
+            
+            // Remove the player from the database entirely
+            var playerToRemove = _database.Players.FirstOrDefault(p => 
+                p.Name.Equals(playerName, StringComparison.OrdinalIgnoreCase));
+            
+            if (playerToRemove != null)
+            {
+                _database.Players.Remove(playerToRemove);
+            }
+            
+            // Save the updated database
+            await _dataService.SaveDatabaseAsync(_database);
+        }
+
+        public async Task DeleteScoreAsync(ScoreEntry score)
+        {
+            await DeleteScoreAsync(score.GameId, score.PlayerName, score.Score, score.AchievedAt);
+        }
+
+        public async Task DeleteScoreAsync(string gameId, string playerName, double score, DateTime achievedAt)
+        {
+            await EnsureDatabaseLoaded();
+            
+            // Find and remove the specific score entry
+            var scoreToRemove = _database!.Scores.FirstOrDefault(s => 
+                s.GameId.Equals(gameId, StringComparison.OrdinalIgnoreCase) &&
+                s.PlayerName.Equals(playerName, StringComparison.OrdinalIgnoreCase) &&
+                Math.Abs(s.Score - score) < 0.001 && // Handle floating point comparison
+                s.AchievedAt == achievedAt);
+            
+            if (scoreToRemove != null)
+            {
+                _database.Scores.Remove(scoreToRemove);
+                
+                // Update player statistics
+                var player = _database.Players.FirstOrDefault(p => 
+                    p.Name.Equals(playerName, StringComparison.OrdinalIgnoreCase));
+                
+                if (player != null && player.GameStats.ContainsKey(gameId))
+                {
+                    var gameStats = player.GameStats[gameId];
+                    gameStats.GamesPlayed = Math.Max(0, gameStats.GamesPlayed - 1);
+                    player.TotalGamesPlayed = Math.Max(0, player.TotalGamesPlayed - 1);
+                    
+                    // Recalculate best score from remaining scores
+                    var remainingScores = _database.Scores
+                        .Where(s => s.GameId.Equals(gameId, StringComparison.OrdinalIgnoreCase) &&
+                                   s.PlayerName.Equals(playerName, StringComparison.OrdinalIgnoreCase))
+                        .Select(s => s.Score);
+                    
+                    gameStats.BestScore = remainingScores.Any() ? remainingScores.Max() : 0;
+                    
+                    // If no more games played for this game, remove the game stats
+                    if (gameStats.GamesPlayed == 0)
+                    {
+                        player.GameStats.Remove(gameId);
+                    }
+                    
+                    // If player has no more games, remove them entirely
+                    if (player.TotalGamesPlayed == 0)
+                    {
+                        _database.Players.Remove(player);
+                    }
+                }
+                
+                // Save the updated database
+                await _dataService.SaveDatabaseAsync(_database);
+            }
+        }
+
         private async Task EnsureDatabaseLoaded()
         {
             if (_database == null)

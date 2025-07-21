@@ -14,6 +14,7 @@ namespace Minesweeper
         private YourMinesweeper.MainForm? _gameForm;
         private MinesweeperStatistics _statistics;
         private GameCore.Models.GameSettings _launcherSettings;
+        private string _preferredDifficulty = "Beginner";
         private GameState _state;
         private Image? _icon;
         
@@ -71,11 +72,20 @@ namespace Minesweeper
         
         public void StartNew()
         {
-            StartNew("Beginner");
+            StartNew(_preferredDifficulty);
+        }
+        
+        public void SetPreferredDifficulty(string difficulty)
+        {
+            _preferredDifficulty = difficulty ?? "Beginner";
         }
         
         public void StartNew(string difficulty)
         {
+            // Remember the difficulty for future StartNew() calls
+            difficulty = difficulty ?? "Beginner";
+            _preferredDifficulty = difficulty;
+            
             if (_gameForm != null)
             {
                 _gameForm.Close();

@@ -10,6 +10,11 @@ namespace GameCore.Interfaces
         Task AddScoreAsync(ScoreEntry score);
         Task<bool> IsHighScoreAsync(string gameId, double score, double? time = null);
         Task<int> GetPlayerRankAsync(string gameId, string playerName);
+        Task ClearAllScoresAsync();
+        Task ClearGameScoresAsync(string gameId);
+        Task ClearPlayerScoresAsync(string playerName);
+        Task DeleteScoreAsync(ScoreEntry score);
+        Task DeleteScoreAsync(string gameId, string playerName, double score, DateTime achievedAt);
         
         // Events
         event EventHandler<ScoreEntry>? NewHighScore;

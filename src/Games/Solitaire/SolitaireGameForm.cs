@@ -263,9 +263,13 @@ namespace Solitaire
         {
             return _difficulty switch
             {
-                "Easy" => 0,     // Standard scoring
-                "Normal" => 0,   // Standard scoring
-                "Hard" => -52,   // Start negative (must move all cards to positive)
+                "Beginner" => 0,        // Standard scoring (was "Easy")
+                "Intermediate" => 0,    // Standard scoring (was "Normal") 
+                "Expert" => -52,        // Start negative - must move all cards to positive (was "Hard")
+                // Legacy support for old difficulty names
+                "Easy" => 0,
+                "Normal" => 0,
+                "Hard" => -52,
                 _ => 0
             };
         }
@@ -879,13 +883,12 @@ namespace Solitaire
                 var timeBonus = Math.Max(0, 300 - (int)gameTime.TotalSeconds);
                 AddScore(timeBonus);
                 
-                // Now update statistics with final score
-                _statistics.UpdateScore(_score);
-                
                 MessageBox.Show($"Congratulations! You won!\nScore: {_score}\nTime: {gameTime:mm\\:ss}\nMoves: {_moves}", 
                     "Game Won!", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 
+                // Only call EndGame once - this handles both score updating and high score checking
                 _statistics.EndGame(true, _score);
+                
                 InitializeGame();
                 _gameTimer.Start();
             }

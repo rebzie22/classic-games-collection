@@ -73,7 +73,7 @@ namespace Solitaire
             }
         }
         
-        public IReadOnlyList<string> DifficultyLevels => new[] { "Easy", "Normal", "Hard" };
+        public IReadOnlyList<string> DifficultyLevels => new[] { "Beginner", "Intermediate", "Expert" };
         
         public IGameStatistics Statistics => _statistics;
         
