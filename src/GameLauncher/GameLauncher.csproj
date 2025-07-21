@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyTitle>Classic Games Collection</AssemblyTitle>
+    <AssemblyDescription>A collection of classic games with modern implementation</AssemblyDescription>
+    <AssemblyCompany>Your Portfolio</AssemblyCompany>
+    <AssemblyProduct>Classic Games Collection</AssemblyProduct>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\Images\*.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GameCore\GameCore.csproj" />
+    <ProjectReference Include="..\Games\Minesweeper\Minesweeper.csproj" />
+    <ProjectReference Include="..\Games\Snake\Snake.csproj" />
+    <ProjectReference Include="..\Games\Tetris\Tetris.csproj" />
+    <ProjectReference Include="..\Games\Solitaire\Solitaire.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Reflection" Version="4.3.0" />
+  </ItemGroup>
+
+</Project>
