@@ -49,6 +49,9 @@ namespace Solitaire
         private int CardHeight => Math.Max(80, (int)(CardWidth * 1.33));
         private new int Margin => Math.Max(10, _gameArea.Width / 80);
         private int CardSpacing => Math.Max(15, CardHeight / 5);
+
+        // Prevent duplicate win handling
+        private int _hasHandledWin = 0; // 0 = not handled, 1 = handled
         
         public SolitaireGameForm(string difficulty, SolitaireStatistics statistics)
         {
@@ -71,13 +74,13 @@ namespace Solitaire
             Size = new Size(800, 600);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Color.FromArgb(0, 100, 0); // Dark green felt
-            
+
             // Enable double buffering to reduce flicker
-            SetStyle(ControlStyles.AllPaintingInWmPaint | 
-                     ControlStyles.UserPaint | 
-                     ControlStyles.DoubleBuffer | 
+            SetStyle(ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.UserPaint |
+                     ControlStyles.DoubleBuffer |
                      ControlStyles.ResizeRedraw, true);
-            
+
             // Score panel
             var scorePanel = new Panel
             {
@@ -86,7 +89,7 @@ namespace Solitaire
                 BackColor = Color.FromArgb(20, 80, 20),
                 Padding = new Padding(10)
             };
-            
+
             _scoreLabel = new Label
             {
                 Text = "Score: 0",
@@ -95,7 +98,7 @@ namespace Solitaire
                 Location = new Point(10, 20),
                 AutoSize = true
             };
-            
+
             _movesLabel = new Label
             {
                 Text = "Moves: 0",
@@ -104,7 +107,7 @@ namespace Solitaire
                 Location = new Point(150, 20),
                 AutoSize = true
             };
-            
+
             _timeLabel = new Label
             {
                 Text = "Time: 00:00",
@@ -113,7 +116,7 @@ namespace Solitaire
                 Location = new Point(280, 20),
                 AutoSize = true
             };
-            
+
             _newGameButton = new Button
             {
                 Text = "New Game",
@@ -124,7 +127,7 @@ namespace Solitaire
                 FlatStyle = FlatStyle.Flat
             };
             _newGameButton.Click += OnNewGameClick;
-            
+
             _pauseButton = new Button
             {
                 Text = "Pause",
@@ -135,49 +138,77 @@ namespace Solitaire
                 FlatStyle = FlatStyle.Flat
             };
             _pauseButton.Click += OnPauseClick;
-            
-            scorePanel.Controls.AddRange(new Control[] 
+
+#if DEBUG
+            var simulateWinButton = new Button
             {
-                _scoreLabel, _movesLabel, _timeLabel, _newGameButton, _pauseButton
-            });
-            
+                Text = "Simulate Win",
+                Location = new Point(580, 15),
+                Size = new Size(100, 30),
+                BackColor = Color.FromArgb(70, 70, 70),
+                ForeColor = Color.Yellow,
+                FlatStyle = FlatStyle.Flat
+            };
+            simulateWinButton.Click += (s, e) => SimulateWin();
+#endif
+
+            var controls = new List<Control> { _scoreLabel, _movesLabel, _timeLabel, _newGameButton, _pauseButton };
+#if DEBUG
+            controls.Add(simulateWinButton);
+#endif
+            scorePanel.Controls.AddRange(controls.ToArray());
+
             // Game area
             _gameArea = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(0, 100, 0)
             };
-            
+
             // Enable double buffering for the game area
             typeof(Panel).InvokeMember("DoubleBuffered",
                 BindingFlags.SetProperty | BindingFlags.Instance | BindingFlags.NonPublic,
                 null, _gameArea, new object[] { true });
-            
+
             _gameArea.Paint += OnGameAreaPaint;
             _gameArea.MouseDown += OnGameAreaMouseDown;
             _gameArea.MouseMove += OnGameAreaMouseMove;
             _gameArea.MouseUp += OnGameAreaMouseUp;
             _gameArea.Resize += OnGameAreaResize;
-            
+
             Controls.Add(_gameArea);
             Controls.Add(scorePanel);
         }
+
+#if DEBUG
+        private void SimulateWin()
+        {
+            // Fill all foundation piles to 13 cards
+            for (int i = 0; i < 4; i++)
+            {
+                while (_foundation[i].Count < 13)
+                {
+                    // Add dummy cards if needed
+                    _foundation[i].Add(new Card(Card.Suit.Spades, Card.Rank.Ace));
+                }
+            }
+            _moves = 20;
+            CheckWinCondition();
+        }
+#endif
         
         private void InitializeGame()
         {
+            System.Threading.Interlocked.Exchange(ref _hasHandledWin, 0);
             _score = GetDifficultyStartingScore();
             _moves = 0;
-            
             // Initialize game collections
             InitializeCollections();
-            
             // Create and shuffle deck
             CreateDeck();
             ShuffleDeck();
-            
             // Deal cards
             DealCards();
-            
             UpdateUI();
         }
         
@@ -297,6 +328,7 @@ namespace Solitaire
         
         private void OnNewGameClick(object? sender, EventArgs e)
         {
+            _hasHandledWin = 0;
             InitializeGame();
             _startTime = DateTime.Now;
             _gameArea.Invalidate();
@@ -684,6 +716,8 @@ namespace Solitaire
             }
             
             EndDrag();
+            // Only check win condition once per user action
+            CheckWinCondition();
         }
         
         private void HandleStockClick()
@@ -709,9 +743,9 @@ namespace Solitaire
                 _moves++;
                 _statistics.RecordMove();
             }
-            
             _gameArea.Invalidate();
             UpdateUI();
+            CheckWinCondition();
         }
         
         private void StartDrag(Card card, Point mouseLocation)
@@ -805,7 +839,6 @@ namespace Solitaire
         {
             // If we're moving multiple cards, move them all
             var cardsToMove = _draggedCards.Count > 1 ? _draggedCards.ToList() : new List<Card> { card };
-            
             foreach (var cardToMove in cardsToMove)
             {
                 // Remove card from its current location
@@ -824,17 +857,13 @@ namespace Solitaire
                         }
                     }
                 }
-                
                 // Add to destination
                 destination.Add(cardToMove);
             }
-            
             _moves++;
             _statistics.RecordMove();
             UpdateUI();
-            
-            // Check for win condition
-            CheckWinCondition();
+            // Do NOT call CheckWinCondition here!
         }
         
         private void TryAutoMoveToFoundation(Card card)
@@ -843,11 +872,11 @@ namespace Solitaire
             {
                 var foundation = _foundation[i];
                 var topCard = foundation.Count > 0 ? foundation.Last() : null;
-                
                 if (card.CanPlaceOnFoundation(topCard))
                 {
                     PerformMove(card, foundation);
                     AddScore(10);
+                    CheckWinCondition();
                     return;
                 }
             }
@@ -865,33 +894,131 @@ namespace Solitaire
             // Ensure foundation is properly initialized
             if (_foundation == null || _foundation.Count != 4)
                 return;
-                
+
             // Check if all foundations have 13 cards (complete suits)
             var totalFoundationCards = _foundation.Sum(f => f?.Count ?? 0);
-            
+
             // DEBUG: Add console output to see what's happening
             System.Diagnostics.Debug.WriteLine($"Foundation cards: {totalFoundationCards}, Moves: {_moves}");
-            
+
             // Only trigger win if we legitimately have all 52 cards in foundations
             // and the game has actually progressed (more than just a few moves)
             if (totalFoundationCards == 52 && _moves > 10)
             {
-                _gameTimer.Stop();
-                var gameTime = DateTime.Now - _startTime;
-                
-                // Bonus points for time
-                var timeBonus = Math.Max(0, 300 - (int)gameTime.TotalSeconds);
-                AddScore(timeBonus);
-                
-                MessageBox.Show($"Congratulations! You won!\nScore: {_score}\nTime: {gameTime:mm\\:ss}\nMoves: {_moves}", 
-                    "Game Won!", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                
-                // Only call EndGame once - this handles both score updating and high score checking
-                _statistics.EndGame(true, _score);
-                
-                InitializeGame();
-                _gameTimer.Start();
+                // Atomically set _hasHandledWin to 1, only proceed if it was 0
+                if (System.Threading.Interlocked.Exchange(ref _hasHandledWin, 1) == 0)
+                {
+                    HandleWinAsync();
+                }
             }
+        }
+
+        // Async win handler to avoid UI freeze
+        private async void HandleWinAsync()
+        {
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] HandleWinAsync called at {DateTime.Now:HH:mm:ss.fff} | _hasHandledWin={_hasHandledWin}");
+            _gameTimer.Stop();
+            var gameTime = DateTime.Now - _startTime;
+            // Bonus points for time
+            var timeBonus = Math.Max(0, 300 - (int)gameTime.TotalSeconds);
+            AddScore(timeBonus);
+
+            MessageBox.Show($"Congratulations! You won!\nScore: {_score}\nTime: {gameTime:mm\\:ss}\nMoves: {_moves}",
+                "Game Won!", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            // Prompt for player name and save high score
+            try
+            {
+                var playerNameDialogType = Type.GetType("GameLauncher.Forms.PlayerNameDialog, GameLauncher");
+                if (playerNameDialogType != null)
+                {
+                    using (var dialog = (Form)Activator.CreateInstance(playerNameDialogType)!)
+                    {
+                        if (dialog.ShowDialog() == DialogResult.OK)
+                        {
+                            var playerNameProp = playerNameDialogType.GetProperty("PlayerName");
+                            var playerName = playerNameProp?.GetValue(dialog)?.ToString() ?? "Player";
+                            // Find ScoreService via MainForm (assumes singleton or static access)
+                            var mainFormType = Type.GetType("GameLauncher.Forms.MainForm, GameLauncher");
+                            var openForms = Application.OpenForms;
+                            Form? mainForm = null;
+                            foreach (Form f in openForms)
+                            {
+                                if (f.GetType().FullName == "GameLauncher.Forms.MainForm")
+                                {
+                                    mainForm = f;
+                                    break;
+                                }
+                            }
+                            if (mainForm != null)
+                            {
+                                var scoreServiceField = mainFormType!.GetField("_scoreService", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                                var scoreService = scoreServiceField?.GetValue(mainForm);
+                                if (scoreService != null)
+                                {
+                                    // Check if this is a new high score (async)
+                                    var getTopScoresAsync = scoreService.GetType().GetMethod("GetTopScoresAsync");
+                                    if (getTopScoresAsync != null)
+                                    {
+                                        dynamic topScoresTask = getTopScoresAsync.Invoke(scoreService, new object[] { "solitaire", 1 });
+                                        await topScoresTask;
+                                        var topScores = topScoresTask.Result as System.Collections.IEnumerable;
+                                        double? bestScore = null;
+                                        double? bestTime = null;
+                                        if (topScores != null)
+                                        {
+                                            foreach (var entry in topScores)
+                                            {
+                                                var entryScore = (double)entry.GetType().GetProperty("Score")!.GetValue(entry)!;
+                                                var entryTimeObj = entry.GetType().GetProperty("Time")!.GetValue(entry);
+                                                double? entryTime = entryTimeObj != null ? (double?)entryTimeObj : null;
+                                                bestScore = entryScore;
+                                                bestTime = entryTime;
+                                                break; // Only need the top one
+                                            }
+                                        }
+                                        bool isNewHigh = false;
+                                        if (bestScore == null || _score > bestScore)
+                                            isNewHigh = true;
+                                        else if (_score == bestScore && bestTime != null && gameTime.TotalSeconds < bestTime)
+                                            isNewHigh = true;
+
+                                        if (isNewHigh)
+                                        {
+                                            // Create ScoreEntry and save via ScoreService
+                                            var scoreEntryType = Type.GetType("GameCore.Models.ScoreEntry, GameCore");
+                                            var scoreEntry = Activator.CreateInstance(scoreEntryType!);
+                                            scoreEntryType!.GetProperty("GameId")!.SetValue(scoreEntry, "solitaire");
+                                            scoreEntryType.GetProperty("PlayerName")!.SetValue(scoreEntry, playerName);
+                                            scoreEntryType.GetProperty("Score")!.SetValue(scoreEntry, _score);
+                                            scoreEntryType.GetProperty("Time")!.SetValue(scoreEntry, gameTime.TotalSeconds);
+                                            scoreEntryType.GetProperty("AchievedAt")!.SetValue(scoreEntry, DateTime.UtcNow);
+                                            var addScoreAsync = scoreService.GetType().GetMethod("AddScoreAsync");
+                                            System.Diagnostics.Debug.WriteLine($"[DEBUG] About to call AddScoreAsync for player={playerName}, score={_score}, time={gameTime.TotalSeconds}");
+                                            if (addScoreAsync != null)
+                                            {
+                                                dynamic addScoreTask = addScoreAsync.Invoke(scoreService, new object[] { scoreEntry });
+                                                await addScoreTask;
+                                                System.Diagnostics.Debug.WriteLine($"[DEBUG] AddScoreAsync completed for player={playerName}, score={_score}, time={gameTime.TotalSeconds}");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to save high score: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            // Only call EndGame once - this handles statistics, but NOT high score saving (handled above)
+            _statistics.EndGame(true, _score); // No longer triggers high score save
+
+            InitializeGame();
+            _gameTimer.Start();
         }
         
         protected override void Dispose(bool disposing)

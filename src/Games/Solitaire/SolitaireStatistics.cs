@@ -77,7 +77,7 @@ namespace Solitaire
                     BestTime = gameTime;
                 }
                 
-                OnScoreChanged(CurrentScore, finalScore);
+                // OnScoreChanged removed to prevent duplicate high score saves
             }
             else
             {

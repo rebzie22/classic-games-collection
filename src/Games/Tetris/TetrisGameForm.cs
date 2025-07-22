@@ -39,7 +39,7 @@ namespace Tetris
         private Label _scoreLabel = null!;
         private Label _levelLabel = null!;
         private Label _linesLabel = null!;
-        private Panel _nextPiecePanel = null!;
+        private DoubleBufferedPanel _nextPiecePanel = null!;
         private Panel _heldPiecePanel = null!;
         private Button _pauseButton = null!;
         private Button _controlsButton = null!;
@@ -177,7 +177,7 @@ namespace Tetris
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _nextPiecePanel = new Panel
+            _nextPiecePanel = new DoubleBufferedPanel
             {
                 Size = new Size(100, 80),
                 BorderStyle = BorderStyle.FixedSingle,

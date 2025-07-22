@@ -14,7 +14,7 @@ namespace GameCore.Models
         public Dictionary<string, object> Metadata { get; set; } = new Dictionary<string, object>();
         
         // Calculated property for display
-        public string TimeFormatted => Time.HasValue ? TimeSpan.FromSeconds(Time.Value).ToString(@"mm\:ss\.ff") : "";
+        public string TimeFormatted => Time.HasValue ? Time.Value.ToString("0.##") + " s" : "";
         
         // Calculated property for sorting (lower time = better for Minesweeper, higher score = better for others)
         public double SortValue => GameId == "minesweeper" ? -(Time ?? double.MaxValue) : Score;

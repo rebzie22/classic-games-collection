@@ -150,7 +150,7 @@ namespace GameLauncher.Forms
                 new ColumnHeader { Text = "Game", Width = 120 },
                 new ColumnHeader { Text = "Player", Width = 120 },
                 new ColumnHeader { Text = "Score", Width = 100 },
-                new ColumnHeader { Text = "Time", Width = 100 },
+                new ColumnHeader { Text = "Time (in seconds)", Width = 100 },
                 new ColumnHeader { Text = "Date", Width = 150 }
             });
             
@@ -219,13 +219,13 @@ namespace GameLauncher.Forms
             listView.ContextMenuStrip = contextMenu;
             
             // Configure columns based on game type
-            if (gameId == "minesweeper")
+            if (gameId == "minesweeper" || gameId == "solitaire")
             {
                 listView.Columns.AddRange(new ColumnHeader[]
                 {
                     new ColumnHeader { Text = "Rank", Width = 60 },
                     new ColumnHeader { Text = "Player", Width = 150 },
-                    new ColumnHeader { Text = "Time", Width = 100 },
+                    new ColumnHeader { Text = "Time (in seconds)", Width = 100 },
                     new ColumnHeader { Text = "Difficulty", Width = 120 },
                     new ColumnHeader { Text = "Date", Width = 150 }
                 });
@@ -260,15 +260,21 @@ namespace GameLauncher.Forms
                 
                 foreach (var score in recentScores)
                 {
-                    var item = new ListViewItem(new string[]
-                    {
-                        GetGameDisplayName(score.GameId),
-                        score.PlayerName,
-                        score.GameId == "minesweeper" ? score.TimeFormatted : score.Score.ToString("N0"),
-                        score.TimeFormatted,
-                        score.AchievedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-                    });
-                    recentListView.Items.Add(item);
+                string scoreDisplay = score.Score.ToString("N0");
+                string timeDisplay = "-";
+                if (score.GameId == "minesweeper" || score.GameId == "solitaire")
+                {
+                    timeDisplay = score.TimeFormatted;
+                }
+                var item = new ListViewItem(new string[]
+                {
+                    GetGameDisplayName(score.GameId),
+                    score.PlayerName,
+                    scoreDisplay,
+                    timeDisplay,
+                    score.AchievedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                });
+                recentListView.Items.Add(item);
                 }
                 
                 // Load game-specific scores
@@ -298,8 +304,7 @@ namespace GameLauncher.Forms
             foreach (var score in scores)
             {
                 ListViewItem item;
-                
-                if (gameId == "minesweeper")
+                if (gameId == "minesweeper" || gameId == "solitaire")
                 {
                     item = new ListViewItem(new string[]
                     {
@@ -321,21 +326,17 @@ namespace GameLauncher.Forms
                         score.AchievedAt.ToLocalTime().ToString("yyyy-MM-dd")
                     });
                 }
-                
                 // Store the score entry in the Tag for deletion functionality
                 item.Tag = score;
-                
                 // Highlight top 3
                 if (rank <= 3)
                 {
                     item.BackColor = rank == 1 ? _themeManager.FirstPlaceColor : 
                                    rank == 2 ? _themeManager.SecondPlaceColor : 
                                    _themeManager.ThirdPlaceColor;
-                    
                     // Ensure text is visible on highlight colors
                     item.ForeColor = _themeManager.IsDarkMode ? Color.Black : Color.Black;
                 }
-                
                 listView.Items.Add(item);
                 rank++;
             }

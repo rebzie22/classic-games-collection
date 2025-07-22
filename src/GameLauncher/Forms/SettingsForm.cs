@@ -96,20 +96,12 @@ namespace GameLauncher.Forms
             CreateGeneralTab(generalTab);
             _tabControl.TabPages.Add(generalTab);
             
-            // Audio/Visual tab
-            var audioVisualTab = new TabPage("Audio/Visual");
-            CreateAudioVisualTab(audioVisualTab);
-            _tabControl.TabPages.Add(audioVisualTab);
             
             // Game Settings tab
             var gameTab = new TabPage("Game Settings");
             CreateGameTab(gameTab);
             _tabControl.TabPages.Add(gameTab);
             
-            // Advanced tab
-            var advancedTab = new TabPage("Advanced");
-            CreateAdvancedTab(advancedTab);
-            _tabControl.TabPages.Add(advancedTab);
         }
         
         private void CreateGeneralTab(TabPage tab)
