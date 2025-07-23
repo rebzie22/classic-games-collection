@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using GameCore.Interfaces;
 
 namespace Minesweeper.YourMinesweeper
 {
@@ -26,25 +27,26 @@ namespace Minesweeper.YourMinesweeper
         private int _secondsElapsed;
         private Difficulty _currentDifficulty;
 
+        // Reference to the adapter for high score/time recording
+        private Minesweeper.MinesweeperGameAdapter? _adapter;
+        private IHighScoreService _highScoreService;
+
         // Public properties for launcher integration
         public GameEngine GameEngine => _gameEngine;
         public int SecondsElapsed => _secondsElapsed;
 
         // Constructor for launcher integration
-        public MainForm(GameSettings settings)
+        public MainForm(GameSettings settings, Minesweeper.MinesweeperGameAdapter? adapter = null, IHighScoreService? highScoreService = null)
         {
             _currentDifficulty = GetDifficultyFromSettings(settings);
+            _adapter = adapter;
+            _highScoreService = highScoreService ?? new StandaloneHighScoreService();
             InitializeComponent();
             InitializeGameWithSettings(settings);
         }
 
         // Default constructor
-        public MainForm()
-        {
-            _currentDifficulty = Difficulty.Beginner;
-            InitializeComponent();
-            InitializeGame();
-        }
+        public MainForm() : this(new GameSettings(), null, null) { }
 
         private Difficulty GetDifficultyFromSettings(GameSettings settings)
         {
@@ -155,6 +157,23 @@ namespace Minesweeper.YourMinesweeper
 
             _statusPanel.Controls.AddRange(new Control[] { _mineCountLabel, _faceButton, _timerLabel });
             Controls.Add(_statusPanel);
+
+            #if DEBUG
+            // Add a Simulate Win button for debugging
+            var simulateWinButton = new Button
+            {
+                Text = "Simulate Win",
+                Font = new Font("Segoe UI", 8, FontStyle.Regular),
+                Size = new Size(90, 25),
+                Location = new Point(120, 12),
+                BackColor = Color.LightGreen
+            };
+            simulateWinButton.Click += (s, e) =>
+            {
+                _gameEngine.SimulateWinForDebug();
+            };
+            _statusPanel.Controls.Add(simulateWinButton);
+            #endif
         }
 
         private void InitializeGameWithSettings(GameSettings settings)
@@ -364,14 +383,49 @@ namespace Minesweeper.YourMinesweeper
                 case GameState.Won:
                     _faceButton.Text = "😎";
                     _gameTimer.Stop();
-                    MessageBox.Show("Congratulations! You won!", "Minesweeper", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Only show name prompt in standalone mode (not when running under launcher)
+                    if (IsStandaloneMode())
+                    {
+                        var playerName = _highScoreService.PromptForPlayerName();
+                        if (string.IsNullOrWhiteSpace(playerName)) break;
+                        var entry = new GameCore.Models.ScoreEntry
+                        {
+                            GameId = "minesweeper",
+                            PlayerName = playerName,
+                            Score = Math.Max(0, 999 - _secondsElapsed),
+                            Difficulty = _currentDifficulty.ToString(),
+                            AchievedAt = DateTime.UtcNow
+                        };
+                        try
+                        {
+                            _highScoreService.SaveScore(entry);
+                            MessageBox.Show($"High score saved!\nName: {playerName}\nTime: {_secondsElapsed} seconds\nScore: {entry.Score}", "High Score", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Could not save high score: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    else if (_adapter != null)
+                    {
+                        _adapter.OnGameWon();
+                    }
                     break;
                 case GameState.Lost:
                     _faceButton.Text = "😵";
                     _gameTimer.Stop();
+                    if (_adapter != null)
+                        _adapter.OnGameLost();
                     UpdateGameDisplay(); // Show all mines
                     break;
             }
+        }
+
+        // Helper to detect if running in standalone mode (not under launcher)
+        private bool IsStandaloneMode()
+        {
+            // Standalone mode: adapter is null
+            return _adapter == null;
         }
 
         private void UpdateStatusPanel()

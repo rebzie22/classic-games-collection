@@ -857,8 +857,19 @@ namespace Solitaire
                         }
                     }
                 }
-                // Add to destination
-                destination.Add(cardToMove);
+                // Only add to foundation if eligible
+                if (destination == null)
+                    continue;
+                if (_foundation.Contains(destination))
+                {
+                    var topCard = destination.Count > 0 ? destination.Last() : null;
+                    if (cardToMove.CanPlaceOnFoundation(topCard))
+                        destination.Add(cardToMove);
+                }
+                else
+                {
+                    destination.Add(cardToMove);
+                }
             }
             _moves++;
             _statistics.RecordMove();
@@ -969,19 +980,15 @@ namespace Solitaire
                                         {
                                             foreach (var entry in topScores)
                                             {
-                                                var entryScore = (double)entry.GetType().GetProperty("Score")!.GetValue(entry)!;
-                                                var entryTimeObj = entry.GetType().GetProperty("Time")!.GetValue(entry);
-                                                double? entryTime = entryTimeObj != null ? (double?)entryTimeObj : null;
-                                                bestScore = entryScore;
-                                                bestTime = entryTime;
-                                                break; // Only need the top one
+                                            var entryScore = (double)entry.GetType().GetProperty("Score")!.GetValue(entry)!;
+                                            bestScore = entryScore;
+                                            break; // Only need the top one
                                             }
                                         }
                                         bool isNewHigh = false;
                                         if (bestScore == null || _score > bestScore)
                                             isNewHigh = true;
-                                        else if (_score == bestScore && bestTime != null && gameTime.TotalSeconds < bestTime)
-                                            isNewHigh = true;
+                                        // Time property removed from ScoreEntry; only compare score
 
                                         if (isNewHigh)
                                         {
@@ -991,7 +998,6 @@ namespace Solitaire
                                             scoreEntryType!.GetProperty("GameId")!.SetValue(scoreEntry, "solitaire");
                                             scoreEntryType.GetProperty("PlayerName")!.SetValue(scoreEntry, playerName);
                                             scoreEntryType.GetProperty("Score")!.SetValue(scoreEntry, _score);
-                                            scoreEntryType.GetProperty("Time")!.SetValue(scoreEntry, gameTime.TotalSeconds);
                                             scoreEntryType.GetProperty("AchievedAt")!.SetValue(scoreEntry, DateTime.UtcNow);
                                             var addScoreAsync = scoreService.GetType().GetMethod("AddScoreAsync");
                                             System.Diagnostics.Debug.WriteLine($"[DEBUG] About to call AddScoreAsync for player={playerName}, score={_score}, time={gameTime.TotalSeconds}");

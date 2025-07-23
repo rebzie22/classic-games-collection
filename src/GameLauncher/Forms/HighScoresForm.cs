@@ -150,7 +150,6 @@ namespace GameLauncher.Forms
                 new ColumnHeader { Text = "Game", Width = 120 },
                 new ColumnHeader { Text = "Player", Width = 120 },
                 new ColumnHeader { Text = "Score", Width = 100 },
-                new ColumnHeader { Text = "Time (in seconds)", Width = 100 },
                 new ColumnHeader { Text = "Date", Width = 150 }
             });
             
@@ -225,7 +224,7 @@ namespace GameLauncher.Forms
                 {
                     new ColumnHeader { Text = "Rank", Width = 60 },
                     new ColumnHeader { Text = "Player", Width = 150 },
-                    new ColumnHeader { Text = "Time (in seconds)", Width = 100 },
+                    new ColumnHeader { Text = "Score", Width = 100 },
                     new ColumnHeader { Text = "Difficulty", Width = 120 },
                     new ColumnHeader { Text = "Date", Width = 150 }
                 });
@@ -261,17 +260,11 @@ namespace GameLauncher.Forms
                 foreach (var score in recentScores)
                 {
                 string scoreDisplay = score.Score.ToString("N0");
-                string timeDisplay = "-";
-                if (score.GameId == "minesweeper" || score.GameId == "solitaire")
-                {
-                    timeDisplay = score.TimeFormatted;
-                }
                 var item = new ListViewItem(new string[]
                 {
                     GetGameDisplayName(score.GameId),
                     score.PlayerName,
                     scoreDisplay,
-                    timeDisplay,
                     score.AchievedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
                 });
                 recentListView.Items.Add(item);
@@ -304,28 +297,14 @@ namespace GameLauncher.Forms
             foreach (var score in scores)
             {
                 ListViewItem item;
-                if (gameId == "minesweeper" || gameId == "solitaire")
+                item = new ListViewItem(new string[]
                 {
-                    item = new ListViewItem(new string[]
-                    {
-                        rank.ToString(),
-                        score.PlayerName,
-                        score.TimeFormatted,
-                        score.Difficulty,
-                        score.AchievedAt.ToLocalTime().ToString("yyyy-MM-dd")
-                    });
-                }
-                else
-                {
-                    item = new ListViewItem(new string[]
-                    {
-                        rank.ToString(),
-                        score.PlayerName,
-                        score.Score.ToString("N0"),
-                        score.Difficulty,
-                        score.AchievedAt.ToLocalTime().ToString("yyyy-MM-dd")
-                    });
-                }
+                    rank.ToString(),
+                    score.PlayerName,
+                    score.Score.ToString("N0"),
+                    score.Difficulty,
+                    score.AchievedAt.ToLocalTime().ToString("yyyy-MM-dd")
+                });
                 // Store the score entry in the Tag for deletion functionality
                 item.Tag = score;
                 // Highlight top 3

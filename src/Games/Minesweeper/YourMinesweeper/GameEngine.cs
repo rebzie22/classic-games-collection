@@ -27,6 +27,30 @@ namespace Minesweeper.YourMinesweeper
             InitializeGame();
         }
 
+        /// <summary>
+        /// For debug/testing: Simulate a win by revealing all non-mine cells and setting state to Won.
+        /// </summary>
+        public void SimulateWinForDebug()
+        {
+            for (int row = 0; row < _settings.Rows; row++)
+            {
+                for (int col = 0; col < _settings.Columns; col++)
+                {
+                    var cell = _grid[row, col];
+                    if (!cell.IsMine)
+                    {
+                        if (!cell.IsRevealed)
+                        {
+                            cell.IsRevealed = true;
+                            RevealedCells++;
+                        }
+                    }
+                }
+            }
+            State = GameState.Won;
+            OnGameStateChanged();
+        }
+
         public void InitializeGame()
         {
             _grid = new Cell[_settings.Rows, _settings.Columns];

@@ -520,7 +520,7 @@ Built as a portfolio project showcasing:
                         Score = e.NewScore,
                         AchievedAt = DateTime.UtcNow,
                         Difficulty = GetCurrentDifficulty(game),
-                        Time = game.GameId == "minesweeper" ? e.NewScore : null // For Minesweeper, score is actually time
+                        // Time property removed from ScoreEntry
                     };
                     await _scoreService.AddScoreAsync(scoreEntry);
                 }
@@ -539,7 +539,7 @@ Built as a portfolio project showcasing:
                         Score = e.NewScore,
                         AchievedAt = DateTime.UtcNow,
                         Difficulty = "Unknown",
-                        Time = e.NewScore
+                        // Time property removed from ScoreEntry
                     };
                     await _scoreService.AddScoreAsync(scoreEntry);
                 }
@@ -559,7 +559,7 @@ Built as a portfolio project showcasing:
             var message = $"🎉 New High Score!\n\n" +
                          $"Game: {GetGameDisplayName(score.GameId)}\n" +
                          $"Player: {score.PlayerName}\n" +
-                         $"Score: {(score.GameId == "minesweeper" ? score.TimeFormatted : score.Score.ToString("N0"))}";
+                         $"Score: {score.Score.ToString("N0")}";
             
             MessageBox.Show(message, "Congratulations!", 
                 MessageBoxButtons.OK, MessageBoxIcon.Information);

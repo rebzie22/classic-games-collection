@@ -51,7 +51,7 @@ namespace GameLauncher.Services
             await EnsureDatabaseLoaded();
             
             // Check if this is a high score
-            var isHighScore = await IsHighScoreAsync(score.GameId, score.Score, score.Time);
+            var isHighScore = await IsHighScoreAsync(score.GameId, score.Score);
             
             // Add the score
             _database!.Scores.Add(score);
@@ -77,7 +77,7 @@ namespace GameLauncher.Services
             if (!topScores.Any())
                 return true; // First score is always a high score
                 
-            var newSortValue = gameId == "minesweeper" ? -(time ?? double.MaxValue) : score;
+            var newSortValue = score;
             return newSortValue > topScores.Last().SortValue || topScores.Count() < 10;
         }
 
@@ -261,9 +261,8 @@ namespace GameLauncher.Services
             // Update best scores
             if (score.GameId == "minesweeper")
             {
-                if (score.Time.HasValue && (!gameStats.BestTime.HasValue || score.Time < gameStats.BestTime))
+                if (score.Score > gameStats.BestScore)
                 {
-                    gameStats.BestTime = score.Time;
                     gameStats.BestScore = score.Score;
                 }
             }
@@ -272,8 +271,6 @@ namespace GameLauncher.Services
                 if (score.Score > gameStats.BestScore)
                 {
                     gameStats.BestScore = score.Score;
-                    if (score.Time.HasValue)
-                        gameStats.BestTime = score.Time;
                 }
             }
             
@@ -284,10 +281,7 @@ namespace GameLauncher.Services
                 .ToList();
                 
             gameStats.AverageScore = playerScores.Average(s => s.Score);
-            if (playerScores.Any(s => s.Time.HasValue))
-            {
-                gameStats.AverageTime = playerScores.Where(s => s.Time.HasValue).Average(s => s.Time!.Value);
-            }
+            // Time property removed from ScoreEntry
         }
     }
 }

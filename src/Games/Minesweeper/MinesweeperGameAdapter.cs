@@ -59,7 +59,9 @@ namespace Minesweeper
         public MinesweeperGameAdapter()
         {
             _statistics = new MinesweeperStatistics(GameId);
-            _statistics.ScoreChanged += (s, e) => ScoreChanged?.Invoke(this, e);
+            _statistics.ScoreChanged += (s, e) => {
+                ScoreChanged?.Invoke(this, e);
+            };
             _launcherSettings = new GameCore.Models.GameSettings();
             _state = GameState.NotInitialized;
         }
@@ -200,12 +202,13 @@ namespace Minesweeper
         {
             State = GameState.Won;
             ((MinesweeperStatistics)_statistics).EndGame(true);
-            
             // Calculate score based on time and difficulty
             int timeScore = CalculateTimeScore();
             int difficultyMultiplier = GetDifficultyMultiplier();
             int finalScore = timeScore * difficultyMultiplier;
-            
+
+            // Time property removed from ScoreEntry; no longer set here
+
             // Trigger score changed event (previous score was 0, new score is calculated)
             ScoreChanged?.Invoke(this, new ScoreChangedEventArgs(0, finalScore));
         }
@@ -224,7 +227,16 @@ namespace Minesweeper
             // Get elapsed time from the main form
             if (_gameForm != null)
             {
-                var elapsedSeconds = _gameForm.SecondsElapsed;
+                // If SecondsElapsed is in tenths or hundredths of a second, convert to seconds
+                // Try dividing by 10 first (tenths), if still too high, try 100 or 1000 (hundredths/milliseconds)
+                int elapsedSeconds = _gameForm.SecondsElapsed;
+                if (elapsedSeconds > 300) // If it's suspiciously high, try dividing
+                {
+                    if (elapsedSeconds > 10000) // likely milliseconds
+                        elapsedSeconds = elapsedSeconds / 1000;
+                    else // likely tenths of a second
+                        elapsedSeconds = elapsedSeconds / 10;
+                }
                 // Higher score for faster completion (max 1000, decreases with time)
                 return Math.Max(1000 - elapsedSeconds, 100);
             }
@@ -322,18 +334,25 @@ namespace Minesweeper
     
     public class MinesweeperStatistics : BaseGameStatistics
     {
+        public GameCore.Models.ScoreEntry? LatestScoreEntry { get; private set; }
+
+        public void SetLatestScoreEntry(GameCore.Models.ScoreEntry entry)
+        {
+            LatestScoreEntry = entry;
+        }
+
         public int MinesFound { get; private set; }
         public int TotalMines { get; private set; }
-        
+
         public MinesweeperStatistics(string gameId) : base(gameId)
         {
         }
-        
+
         public void UpdateMineStats(int minesFound, int totalMines)
         {
             MinesFound = minesFound;
             TotalMines = totalMines;
-            
+
             // Score based on efficiency and time
             if (totalMines > 0)
             {
